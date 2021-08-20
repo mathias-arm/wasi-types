@@ -13,7 +13,7 @@ std = []
 sgx = ["serde/mesalock_sgx", "sgx_tstd"]
 
 [dependencies]
-bitflags = "1.1"
+bitflags = "=1.2.1"
 proper = "0.1"
 serde = { git = "https://github.com/veracruz-project/serde.git", features=["derive"], branch = "veracruz" }
 err-derive = "0.2"
