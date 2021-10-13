@@ -2,12 +2,6 @@
 //! [the spec](https://github.com/CraneStation/wasmtime/blob/master/docs/WASI-api.md)
 
 
-#![cfg_attr(feature = "sgx", no_std)]
-
-#[cfg(feature = "sgx")]
-#[macro_use]
-extern crate sgx_tstd as std;
-
 #[macro_use]
 extern crate bitflags;
 use num::FromPrimitive;
