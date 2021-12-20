@@ -4,8 +4,8 @@
 
 #[macro_use]
 extern crate bitflags;
-#[macro_use]
-extern crate proper;
+use num::FromPrimitive;
+use num_derive::FromPrimitive;
 use std::cmp::Ordering;
 use std::convert::TryFrom;
 use serde::{Deserialize, Serialize};
@@ -13,7 +13,7 @@ use err_derive::Error;
 
 /// File or memory access pattern advisory information.
 #[repr(u8)]
-#[derive(Clone, Copy, PartialEq, Prim, Debug)]
+#[derive(Clone, Copy, FromPrimitive, PartialEq, Debug)]
 pub enum Advice {
     /// The application has no advice to give on its behavior with respect to the specified data.
     Normal,
@@ -41,10 +41,17 @@ impl From<Advice> for u8 {
     }
 }
 
+impl TryFrom<u8> for Advice {
+    type Error = ();
+    #[inline]
+    fn try_from(advice: u8) -> Result<Self, Self::Error> {
+        FromPrimitive::from_u8(advice).ok_or(())
+    }
+}
+
 /// Identifiers for clocks.
 #[repr(u32)]
-#[prim(ty = "u32")]
-#[derive(Clone, Copy, PartialEq, Debug, Prim)]
+#[derive(Clone, Copy, FromPrimitive, PartialEq, Debug)]
 pub enum ClockId {
     /// The clock measuring real time. Time value zero corresponds with 1970-01-01T00:00:00Z.
     RealTime,
@@ -70,15 +77,30 @@ impl From<ClockId> for u32 {
     }
 }
 
+impl TryFrom<u32> for ClockId {
+    type Error = ();
+    #[inline]
+    fn try_from(clockid: u32) -> Result<Self, Self::Error> {
+        FromPrimitive::from_u32(clockid).ok_or(())
+    }
+}
+
 /// Identifier for a device containing a file system. Can be used in combination with `Inode`
 /// to uniquely identify a file or directory in the filesystem.
 #[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Prim)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Device(u64);
+
+impl From<u64> for Device {
+    #[inline]
+    fn from(device: u64) -> Self {
+        Self(device)
+    }
+}
 
 /// A reference to the offset of a directory entry.
 #[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Prim)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DirCookie(pub u64);
 
 impl DirCookie {
@@ -86,6 +108,13 @@ impl DirCookie {
     /// within a directory.
     pub fn start() -> Self {
         DirCookie(0)
+    }
+}
+
+impl From<u64> for DirCookie {
+    #[inline]
+    fn from(cookie: u64) -> Self {
+        Self(cookie)
     }
 }
 
@@ -108,8 +137,7 @@ pub struct DirEnt {
 
 /// Error codes returned by functions.
 #[repr(u16)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Prim, Serialize, Deserialize, Error)]
-#[prim(ty = "u16")]
+#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq, Eq, Serialize, Deserialize, Error)]
 #[non_exhaustive]
 pub enum ErrNo {
     /// No error occurred. System call completed successfully.
@@ -428,6 +456,14 @@ impl From<ErrNo> for u16 {
     }
 }
 
+impl TryFrom<u16> for ErrNo {
+    type Error = ();
+    #[inline]
+    fn try_from(errno: u16) -> Result<Self, Self::Error> {
+        FromPrimitive::from_u16(errno).ok_or(())
+    }
+}
+
 impl From<std::io::Error> for ErrNo {
     fn from(err: std::io::Error) -> Self {
         use std::io::ErrorKind;
@@ -462,7 +498,7 @@ pub struct Event {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Prim)]
+#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq, Eq)]
 pub enum EventType {
     /// The time value of clock `SubscriptionType::clock.clock_id` has reached timestamp
     /// `Subscription::clock.timeout`.
@@ -484,10 +520,17 @@ impl From<EventType> for u8 {
     }
 }
 
+impl TryFrom<u8> for EventType {
+    type Error = ();
+    #[inline]
+    fn try_from(event: u8) -> Result<Self, Self::Error> {
+        FromPrimitive::from_u8(event).ok_or(())
+    }
+}
+
 /// The state of the file descriptor subscribed to with `EventType::FdRead` or `EventType::FdWrte`.
 #[repr(u16)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Prim)]
-#[prim(ty = "u16")]
+#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq, Eq)]
 pub enum EventRwFlags {
     None,
     Hangup,
@@ -497,6 +540,14 @@ impl From<EventRwFlags> for u16 {
     #[inline]
     fn from(flags: EventRwFlags) -> Self {
         flags as u16
+    }
+}
+
+impl TryFrom<u16> for EventRwFlags {
+    type Error = ();
+    #[inline]
+    fn try_from(flags: u16) -> Result<Self, Self::Error> {
+        FromPrimitive::from_u16(flags).ok_or(())
     }
 }
 
@@ -514,7 +565,7 @@ pub struct EventFdState {
 /// File descriptors are not guaranteed to be contiguous or allocated in ascending order.
 /// Information about a file descriptor may be obtained through `fd_prestat_get`.
 #[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Prim, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Fd(pub u32);
 
 impl Ord for Fd {
@@ -526,6 +577,21 @@ impl Ord for Fd {
 impl PartialOrd for Fd {
     fn partial_cmp(&self, Fd(other): &Self) -> Option<Ordering> {
         self.0.partial_cmp(other)
+    }
+}
+
+impl From<u32> for Fd {
+    #[inline]
+    fn from(fd: u32) -> Self {
+        Fd(fd)
+    }
+}
+
+impl From<Fd> for u32 {
+    #[inline]
+    fn from(fd: Fd) -> u32 {
+        let Fd(n) = fd;
+        n
     }
 }
 
@@ -620,7 +686,7 @@ pub type FileDelta = i64;
 
 /// The type of a file descriptor or file.
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Prim)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FileType {
     Unknown,
     BlockDevice,
@@ -656,12 +722,20 @@ pub struct FileStat {
 }
 
 /// File serial number that is unique within its file system.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Prim, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Inode(pub u64);
 
 impl Ord for Inode {
     fn cmp(&self, Inode(other): &Self) -> Ordering {
         self.0.cmp(other)
+    }
+}
+
+impl From<Inode> for u64 {
+    #[inline]
+    fn from(inode: Inode) -> Self {
+        let Inode(n) = inode;
+        n
     }
 }
 
@@ -774,7 +848,7 @@ impl From<Rights> for u64 {
 
 /// Signal condition.
 #[repr(u8)]
-#[derive(Clone, Copy, PartialEq, Prim)]
+#[derive(Clone, Copy, FromPrimitive, PartialEq)]
 pub enum Signal {
     Reserved,
     Abort,
@@ -812,8 +886,17 @@ impl From<Signal> for u8 {
     }
 }
 
+impl TryFrom<u8> for Signal {
+    type Error = ();
+    #[inline]
+    fn try_from(signal: u8) -> Result<Self, Self::Error> {
+        let x = FromPrimitive::from_u8(signal).ok_or(())?;
+        Ok(x)
+    }
+}
+
 /// Timestamp in nanoseconds.
-#[derive(Prim, Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Timestamp(u64);
 
 impl Timestamp {
@@ -827,6 +910,12 @@ impl Timestamp {
 
     pub fn as_nanos(&self) -> u64 {
         self.0
+    }
+}
+
+impl From<u64> for Timestamp {
+    fn from(t: u64) -> Timestamp {
+        Timestamp(t)
     }
 }
 
@@ -859,7 +948,7 @@ pub type UserData = u64;
 
 /// The position relative to which to set the offset of the file descriptor.
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, Prim)]
+#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq)]
 pub enum Whence {
     Start,
     Current,
@@ -870,6 +959,14 @@ impl From<Whence> for u8 {
     #[inline]
     fn from(whence: Whence) -> Self {
         whence as u8
+    }
+}
+
+impl TryFrom<u8> for Whence {
+    type Error = ();
+    #[inline]
+    fn try_from(whence: u8) -> Result<Self, Self::Error> {
+        FromPrimitive::from_u8(whence).ok_or(())
     }
 }
 
